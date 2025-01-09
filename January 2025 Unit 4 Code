@@ -1,0 +1,53 @@
+forename = str(input("Enter your first name >>> "))
+
+while forename.isdigit() == True:
+  print("You cannot enter a number.")
+  forename = str(input("Enter your first name. No numbers!"))
+  
+surname = str(input("Enter your surname >>> "))
+
+while surname.isdigit() == True:
+  print("You cannot enter a number.")
+  surname = str(input("Enter your first name. No numbers!"))
+
+from datetime import datetime, timedelta
+
+date_now = datetime.now()
+date_of_birth = input("Enter your date of birth DD/MM/YYYY >>> ")
+dob_formatted = datetime.strptime(date_of_birth, '%d/%m/%Y')
+year_of_birth = (f'{dob_formatted.year}')
+
+difference = date_now - dob_formatted
+age = difference.days // 365
+
+if age < 18:
+  print("You must be 18 or older")
+else:
+  print("You are over 18. You may proceed.")
+
+def makeUserID (forename, surname, year_of_birth):
+  if len(forename) <3:
+    while len(forename) < 3:
+      forename += "x"
+  if len(surname) <3:
+    while len(surname) <3:
+      surname += "x"
+  
+  userID = forename[0:3] + surname [0:3] + year_of_birth
+  return userID
+
+userID = makeUserID(forename, surname, year_of_birth)
+
+import random
+import string
+
+def generate_password(length = 8):
+  characters = string.ascii_letters + string.digits + string.punctuation
+  password = ''.join(random.choice(characters) for i in range(length))
+  return password
+  
+password = generate_password()
+
+print(forename + " " + surname)
+print(userID)
+print(password)
