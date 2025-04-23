@@ -1,0 +1,277 @@
+// The game variables
+var mouse;
+var cheeseGroup;
+var trapGroup;
+var lives = 3;
+var score = 0;
+var gameState = "play";
+var level = 1;
+var levelTimer = 30;
+var levelStartTime;
+var timerDisplay = 0;
+var shakeTimer = 0;
+
+// The function to set up the canvas and main game
+function setup() {
+  createCanvas(400, 400);
+
+  cheeseGroup = new Group();
+  trapGroup = new Group();
+
+  mouse = createSprite(200, 350);
+  mouse.setAnimation("mouse_right");
+  mouse.scale = 0.3;
+  mouse.setCollider("rectangle", 0, 0, 150, 150); // Wider for better collision detection
+
+  generateLevel(level);
+  levelStartTime = millis();
+}
+
+// The draw function to handle the main game
+function draw() {
+  background("lightgreen");
+  
+  // Applying the screen shake
+  push();
+  if (shakeTimer > 0) {
+    translate(random(-5, 5), random(-5, 5));
+    shakeTimer--;    
+  }
+
+  if (gameState === "play") {
+    handleMovement();
+    drawSprites();
+    displayUI();
+
+    // Updating the timer as the level goes on
+    timerDisplay = 30 - int((millis() - levelStartTime) / 1000);
+    if (timerDisplay <= 0) {
+      loseLife();
+    }
+
+    // This shows what will happen when cheese is collected
+    for (var i = cheeseGroup.length - 1; i >= 0; i--) {
+      if (mouse.overlap(cheeseGroup[i])) {
+        createCollectEffect(cheeseGroup[i].x, cheeseGroup[i].y);
+        cheeseGroup[i].remove();
+        score += 10;
+        playSound("sound://category_alerts/vibrant_game_cute_alert_1.mp3");
+      }
+    }
+
+    // This shows what will happen when the mouse hits the trap
+    for (var i = 0; i < trapGroup.length; i++) {
+      if (mouse.overlap(trapGroup[i])) {
+        createTrapEffect(mouse.x, mouse.y);
+        loseLife();
+        break;
+      }
+    }
+
+    // This shows the circumstances required to level up
+    if (cheeseGroup.length === 0) {
+      playSound("sound://category_achievements/lighthearted_bonus_objective_1.mp3");
+      showLevelUpEffect();
+      level++;
+      generateLevel(level);
+    }
+
+  // And the code to display the game over screen
+  } else if (gameState === "end") {
+    background("darkred");
+    fill("white");
+    textSize(24);
+    textAlign(CENTER);
+    text("Game Over", 200, 180);
+    text("Final Score: " + score, 200, 220);
+    text("Press R to Restart", 200, 260);
+  }
+
+  // This code displays the key needed to reset the game 
+  if (keyWentDown("r") && gameState === "end") {
+    resetGame();
+  }
+  
+  pop(); // The screen shake ends
+}
+
+// This function handles the player's movements and animations made in accordance
+function handleMovement() {
+  if (keyDown("left")) {
+    mouse.x -= 4;
+    mouse.setAnimation("mouse_left");
+  }
+  if (keyDown("right")) {
+    mouse.x += 4;
+    mouse.setAnimation("mouse_right");
+  }
+  if (keyDown("up")) {
+    mouse.y -= 4;
+    mouse.setAnimation("mouse_up");
+  }
+  if (keyDown("down")) {
+    mouse.y += 4;
+    mouse.setAnimation("mouse_down");
+  }
+}
+
+// This function allows the player's score, remaining lives, time remaining, and level on the screen
+function displayUI() {
+  fill("black");
+  textSize(16);
+  textAlign(LEFT);
+  text("Score: " + score, 10, 20);
+  text("Lives: " + lives, 10, 40);
+  text("Time: " + timerDisplay, 10, 60);
+  text("Level: " + level, 10, 80);
+}
+
+// This function generates a new level and makes sure the levels get harder each time
+function generateLevel(currentLevel) {
+  cheeseGroup.removeSprites();
+  trapGroup.removeSprites();
+
+  mouse.x = 200;
+  mouse.y = 350;
+
+  generateCheese(currentLevel + 1);
+  generateTraps(currentLevel + 2);
+  levelStartTime = millis();
+}
+
+// This function generates the cheese with random positions
+function generateCheese(count) {
+  for (var i = 0; i < count; i++) {
+    var placed = false;
+    while (!placed) {
+      var x = random(50, 350);
+      var y = random(50, 350);
+
+      if (dist(x, y, mouse.x, mouse.y) < 60) continue;
+
+      var cheese = createSprite(x, y);
+      cheese.setAnimation("cheese");
+      cheese.scale = 0.14;
+      cheese.setCollider("rectangle", 0, 0, 40, 40);
+
+      placed = true;
+
+      // Prevent overlapping cheese
+      for (var j = 0; j < cheeseGroup.length; j++) {
+        if (dist(x, y, cheeseGroup[j].x, cheeseGroup[j].y) < 40) {
+          cheese.remove();
+          placed = false;
+          break;
+        }
+      }
+
+      // Prevent cheese spawning on traps
+      for (var j = 0; j < trapGroup.length; j++) {
+        if (dist(x, y, trapGroup[j].x, trapGroup[j].y) < 40) {
+          cheese.remove();
+          placed = false;
+          break;
+        }
+      }
+
+      if (placed) cheeseGroup.add(cheese);
+    }
+  }
+}
+
+// This function generates the traps with random postitions
+function generateTraps(count) {
+  for (var i = 0; i < count; i++) {
+    var placed = false;
+    while (!placed) {
+      var x = random(50, 350);
+      var y = random(50, 350);
+
+      if (dist(x, y, mouse.x, mouse.y) < 80) continue;
+
+      var trap = createSprite(x, y);
+      trap.setAnimation("trap");
+      trap.scale = 0.2;
+      trap.setCollider("rectangle", 0, 0, 40, 40);
+
+      placed = true;
+
+      // Prevent overlapping with other traps
+      for (var j = 0; j < trapGroup.length; j++) {
+        if (dist(x, y, trapGroup[j].x, trapGroup[j].y) < 40) {
+          trap.remove();
+          placed = false;
+          break;
+        }
+      }
+
+      // Prevent traps spawning on cheese
+      for (var j = 0; j < cheeseGroup.length; j++) {
+        if (dist(x, y, cheeseGroup[j].x, cheeseGroup[j].y) < 40) {
+          trap.remove();
+          placed = false;
+          break;
+        }
+      }
+
+      if (placed) trapGroup.add(trap);
+    }
+  }
+}
+
+// Creating the effect when hitting a trap
+function createTrapEffect(x, y) {
+  for (var i = 0; i < 8; i++) {
+    var particles = createSprite(x, y);
+    particles.setAnimation("red_dot");
+    particles.velocityX = random(-2, 2);
+    particles.velocityY = random(-2, 2);
+    particles.life = 20;
+    particles.scale = 1.0;
+  }
+  shakeTimer = 10;
+}
+
+// Creating the effect when collecting cheese
+function createCollectEffect(x, y) {
+  var collect = createSprite(x, y);
+  collect.setAnimation("collect");
+  collect.velocityY = -1
+  collect.life = 30;
+  collect.scale = 1.0
+}
+
+// Creating the effect when leveling up
+function showLevelUpEffect() {
+  var medal = createSprite(width / 2, height / 2);
+  medal.setAnimation("medal")
+  medal.scale = 1.2;
+  medal.depth = 999;
+  medal.life = 15;
+}
+
+// This function handles the logic for losing lives and ending the game when all lives are lost
+function loseLife() {
+  lives--;
+  // The player also loses 2 points when losing a life
+  score -= 2;
+  playSound("sound://category_alerts/vibrant_game_negative_alert.mp3");
+
+  if (lives <= 0) {
+    gameState = "end";
+    playSound("sound://category_alerts/playful_quirky_negative_game_cue_2.mp3");
+  } else {
+    // Reset mouse position only (don't generate a new level)
+    mouse.x = 200;
+    mouse.y = 350;
+  }
+}
+
+// This function controls what happens when the player presses 'R' to restart the game
+function resetGame() {
+  score = 0;
+  lives = 3;
+  level = 1;
+  gameState = "play";
+  generateLevel(level);
+}
