@@ -1,0 +1,246 @@
+// Set screen default
+setScreen("homeScreen");
+
+// Variables
+var score = 0;
+var currentQuestion = 0;
+var selectedLevel = 0;
+var timeRemaining = 0;
+var timer;
+var currentQuestionData;
+
+// Event Listeners
+onEvent("startGameButton", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("selectLevelScreen");
+});
+
+onEvent("instructionsButton", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("instructionsScreen");
+});
+
+onEvent("level0Button", "click", function() {
+  playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3");
+  selectedLevel = 0;
+  startGame();
+});
+
+onEvent("level1Button", "click", function() {
+  playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3");
+  selectedLevel = 1;
+  startGame();
+});
+
+onEvent("level2Button", "click", function() {
+  playSound("sound://category_tap/vibrant_game_start_with_tone_hum.mp3");
+  selectedLevel = 2;
+  startGame();
+});
+
+onEvent("homeButton1", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("homeScreen");
+});
+
+onEvent("homeButton2", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("homeScreen");
+});
+
+onEvent("homeButton3", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("homeScreen");
+});
+
+onEvent("playAgainButton", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  setScreen("selectLevelScreen");
+});
+
+onEvent("answer1", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  checkAnswer(Number(getText("answer1")));
+});
+
+onEvent("answer2", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  checkAnswer(Number(getText("answer2")));
+});
+
+onEvent("answer3", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  checkAnswer(Number(getText("answer3")));
+});
+
+onEvent("answer4", "click", function() {
+  playSound("sound://category_app/app_interface_click_2.mp3");
+  checkAnswer(Number(getText("answer4")));
+});
+
+// Game Logic
+function startGame() {
+  score = 0;
+  currentQuestion = 0;
+  setScreen("gameScreen");
+  showNextQuestion();
+
+  if (selectedLevel === 0) {
+    hideElement("timerLabel");
+  } else {
+    showElement("timerLabel");
+  }
+}
+
+function showNextQuestion() {
+  currentQuestionData = generateQuestion();
+  setText("questionLabel", currentQuestionData.question);
+  setText("questionNumberLabel", "Question " + (currentQuestion + 1) + " of 10");
+  setText("answer1", currentQuestionData.choices[0]);
+  setText("answer2", currentQuestionData.choices[1]);
+  setText("answer3", currentQuestionData.choices[2]);
+  setText("answer4", currentQuestionData.choices[3]);
+  setText("scoreLabelGame", "Score: " + score);
+  hideElement("feedbackLabel");
+
+  if (selectedLevel !== 0) {
+    resetTimer();
+  }
+}
+
+function resetTimer() {
+  clearInterval(timer);
+  timeRemaining = (selectedLevel === 1) ? 20 : 10;
+  setText("timerLabel", "Time: " + timeRemaining);
+
+  timer = setInterval(function() {
+    timeRemaining--;
+    setText("timerLabel", "Time: " + timeRemaining);
+
+    if (timeRemaining <= 0) {
+      clearInterval(timer);
+      handleTimeOut();
+    }
+  }, 1000);
+}
+
+function handleTimeOut() {
+  setText("feedbackLabel", " 🕰️ Time's up!");
+  playSound("sound://category_alerts/playful_game_error_sound_5_long.mp3")
+  flashFeedback("orange");
+  showElement("feedbackLabel");
+  currentQuestion++;
+  if (currentQuestion < 10) {
+    setTimeout(showNextQuestion, 1500);
+  } else {
+    setTimeout(showResults, 1500);
+  }
+}
+
+function checkAnswer(selectedAnswer) {
+  var correct = currentQuestionData.answer;
+  if (selectedAnswer === correct) {
+    score++;
+    setText("feedbackLabel", "✅ Correct! 🎉");
+    playSound("sound://category_music/musical_correct_1.mp3");
+    flashFeedback("green")
+  } else {
+    setText("feedbackLabel", "❌ Incorrect!");
+    playSound("sound://category_alerts/playful_quirky_negative_game_cue_2.mp3");
+    flashFeedback("red")
+  }
+  setText("scoreLabelGame", "Score: " + score);
+  showElement("feedbackLabel");
+  currentQuestion++;
+
+  if (selectedLevel !== 0) clearInterval(timer);
+
+  if (currentQuestion < 10) {
+    setTimeout(showNextQuestion, 1500);
+  } else {
+    setTimeout(showResults, 1500);
+  }
+}
+
+function showResults() {
+  setScreen("resultsScreen");
+
+  // Display score
+  setText("finalscoreLabel", "You scored " + score + " out of 10!");
+
+  // Change background and heading based on score
+  if (score >= 8) {
+    setProperty("resultsScreen", "background-color", "#FFD700"); // Gold
+    setText("resultsHeadingLabel", "🏆 Amazing work!");
+    playSound("sound://category_alerts/playful_quirky_positive_game_cue_1.mp3");
+  } else if (score >= 5) {
+    setProperty("resultsScreen", "background-color", "#87CEFA"); // Light Blue
+    setText("resultsHeadingLabel", "👏 Good job!");
+    playSound("sound://category_notifications/playful_quirky_positive_game_cue_2.mp3");
+  } else {
+    setProperty("resultsScreen", "background-color", "#FFB6C1"); // Pink
+    setText("resultsHeadingLabel", "😊 Keep practicing!");
+    playSound("sound://category_alerts/playful_game_error_sound_4.mp3");
+  }
+
+  // Clear timer if needed
+  if (selectedLevel !== 0) clearInterval(timer);
+}
+
+
+function generateQuestion() {
+  var num1 = randomNumber(1, 12);
+  var num2 = randomNumber(1, 12);
+  var operation = randomNumber(0, 3);
+  var question = "";
+  var correctAnswer = 0;
+
+  if (operation === 0) {
+    question = num1 + " + " + num2;
+    correctAnswer = num1 + num2;
+  } else if (operation === 1) {
+    if (num1 >= num2) {
+      question = num1 + " - " + num2;
+      correctAnswer = num1 - num2;
+    } else {
+      return generateQuestion();
+    }
+  } else if (operation === 2) {
+    question = num1 + " × " + num2;
+    correctAnswer = num1 * num2;
+  } else {
+    if (num1 % num2 === 0) {
+      question = num1 + " ÷ " + num2;
+      correctAnswer = num1 / num2;
+    } else {
+      return generateQuestion();
+    }
+  }
+
+  var choices = [correctAnswer];
+  while (choices.length < 4) {
+    var offset = randomNumber(-5, 5);
+    var choice = correctAnswer + offset;
+    if (choice > 0 && choices.indexOf(choice) === -1) {
+      choices.push(choice);
+    }
+  }
+
+  for (var i = choices.length - 1; i > 0; i--) {
+    var j = randomNumber(0, i);
+    var temp = choices[i];
+    choices[i] = choices[j];
+    choices[j] = temp;
+  }
+
+  return { question: question, answer: correctAnswer, choices: choices };
+}
+
+function flashFeedback(color) {
+  setProperty("feedbackLabel", "background-color", color);
+  setProperty("feedbackLabel", "text-color", "white");
+  setTimeout(function() {
+    setProperty("feedbackLabel", "background-color", "transparent");
+    setProperty("feedbackLabel", "text-color", "black");
+  }, 500);
+}
